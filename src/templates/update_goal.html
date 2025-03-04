@@ -1,0 +1,25 @@
+{% extends "base.html" %}
+{% block title %}Atualizar Objetivo{% endblock %}
+
+{% block content %}
+<div class="container">
+  <h2 class="mb-4">Atualizar Objetivo</h2>
+  <div class="card">
+    <div class="card-body">
+      <h5 class="card-title">{{ goal['goal_name'] }}</h5>
+      <p class="card-text">Meta: {{ goal['target_amount']|currency }}</p>
+      <p class="card-text">Atual: {{ goal['current_amount']|currency }}</p>
+      <form method="post" class="row g-3">
+        <div class="col-md-6">
+          <label for="current_amount" class="form-label">Novo valor atingido (R$)</label>
+          <input type="number" step="0.01" class="form-control" id="current_amount" name="current_amount"
+                 value="{{ goal['current_amount'] }}" required>
+        </div>
+        <div class="col-md-6 d-flex align-items-end">
+          <button type="submit" class="btn btn-success">Salvar</button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+{% endblock %}

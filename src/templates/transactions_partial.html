@@ -1,0 +1,65 @@
+<div class="table-responsive">
+  <table class="table table-sm table-hover align-middle">
+    <thead class="table-light">
+      <tr>
+        <th>Tipo</th>
+        <th>Valor</th>
+        <th>Tag</th>
+        <th>Lanç.</th>
+        <th>Venc.</th>
+        <th>Pago?</th>
+        <th>Data Pag.</th>
+        <th>Objetivo?</th>
+        <th>Ações</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for t in transactions %}
+      <tr>
+        <td>{{ t['type']|capitalize }}</td>
+        <td>{{ t['amount']|currency }}</td>
+        <td>{{ t['tag'] }}</td>
+        <td>{{ t['date_launch']|date_br }}</td>
+        <td>{{ t['date_due']|date_br }}</td>
+        <td>{{ 'Sim' if t['paid'] else 'Não' }}</td>
+        <td>{{ t['paid_date']|date_br if t['paid_date'] else '-' }}</td>
+        <td>
+          {% if t['goal_id'] %}
+            Objetivo #{{ t['goal_id'] }}
+          {% else %}
+            -
+          {% endif %}
+        </td>
+        <td>
+          <a href="{{ url_for('edit_transaction', transaction_id=t['id']) }}" class="text-primary me-2" title="Editar">
+            <i class="fa fa-pen-to-square"></i>
+          </a>
+          <form method="post" action="{{ url_for('delete_transaction', transaction_id=t['id']) }}" class="d-inline" onsubmit="return confirm('Deseja excluir esta transação?');">
+            <button type="submit" class="btn btn-link text-danger p-0" title="Excluir">
+              <i class="fa fa-trash"></i>
+            </button>
+          </form>
+        </td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+
+{% if page is defined and total_pages is defined %}
+<nav>
+  <ul class="pagination justify-content-center">
+    <li class="page-item {% if page == 1 %}disabled{% endif %}">
+      <a class="page-link" href="{{ url_for('transactions_ajax', page=page-1, timeframe=timeframe, month=selected_month) }}">Anterior</a>
+    </li>
+    {% for p in range(1, total_pages + 1) %}
+    <li class="page-item {% if page == p %}active{% endif %}">
+      <a class="page-link" href="{{ url_for('transactions_ajax', page=p, timeframe=timeframe, month=selected_month) }}">{{ p }}</a>
+    </li>
+    {% endfor %}
+    <li class="page-item {% if page == total_pages %}disabled{% endif %}">
+      <a class="page-link" href="{{ url_for('transactions_ajax', page=page+1, timeframe=timeframe, month=selected_month) }}">Próximo</a>
+    </li>
+  </ul>
+</nav>
+{% endif %}

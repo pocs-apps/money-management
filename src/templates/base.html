@@ -1,0 +1,377 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <title>{% block title %}Dashboard Familiar{% endblock %}</title>
+  <!-- Bootstrap 5 CSS -->
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" />
+  <!-- FontAwesome -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
+  <style>
+    /* Temas: Light e Dark */
+    body.light-mode {
+      background-color: #f8f9fa;
+      color: #212529;
+    }
+    body.dark-mode {
+      background-color: #1e1e2f;
+      color: #ffffff;
+    }
+    /* Sidebar */
+    .sidebar {
+      text-align: center;
+      transition: width 0.5s;
+    }
+    .sidebar.collapsed {
+      width: 50px;
+    }
+    .sidebar a.nav-link {
+      color: inherit;
+      padding: 15px;
+      display: flex;
+      align-items: center;
+    }
+    .sidebar .icon-only {
+      display: none;
+    }
+    .sidebar.collapsed .icon-only {
+      display: inline-block;
+    }
+    .sidebar.collapsed .text-label {
+      display: none;
+    }
+    /* Componentes no tema dark */
+    .dark-mode .card {
+      background-color: #2b2b3b;
+      border: 1px solid #3e3e50;
+      color: #fff;
+    }
+    .dark-mode .card-header {
+      background-color: #34344a;
+      border-bottom: 1px solid #3e3e50;
+      color: #f8f9fa;
+    }
+    .dark-mode .alert {
+      background-color: #34344a;
+      color: #f8f9fa;
+      border: 1px solid #3e3e50;
+    }
+    .dark-mode .table thead.table-light {
+      background-color: #34344a;
+      color: #f8f9fa;
+    }
+    .dark-mode .table-hover tbody tr:hover {
+      background-color: #2f2f42;
+    }
+    .dark-mode .form-control {
+      background-color: #2f2f42;
+      color: #f8f9fa;
+      border: 1px solid #3e3e50;
+    }
+    /* Toast container */
+    .toast-container {
+      position: fixed;
+      top: 1rem;
+      right: 1rem;
+      z-index: 1200;
+    }
+  </style>
+  {% block head %}{% endblock %}
+</head>
+<body>
+  <div class="d-flex">
+    <!-- Sidebar (apenas se usuário logado) -->
+    {% if session.get('user_id') %}
+    <div id="sidebar" class="sidebar border-end collapsed" style="background: linear-gradient(135deg, #ffffff, #ffffff);">
+      <div class="p-2 d-flex justify-content-between align-items-center">
+        <span class="fw-bold text-label">Meu Dinheiro</span>
+        <button id="toggleSidebarBtn" class="btn btn-sm btn-outline-light">
+          <i id="sidebarToggleIcon" class="fa fa-bars icon-only" style="color: #000000;"></i>
+        </button>
+      </div>
+      <hr class="m-0" style="border-color: rgba(0, 0, 0, 0.3);" />
+      <a href="{{ url_for('dashboard') }}" class="nav-link text-white" style="padding: 15px;">
+        <i class="fa fa-tachometer me-2 icon-only" style="color: #ffc107;"></i>
+        <span class="text-label">Dashboard</span>
+      </a>
+      <hr class="m-0" style="border-color: rgba(255,255,255,0.3);" />
+      <a href="#" class="nav-link text-white" data-bs-toggle="modal" data-bs-target="#transactionsModal" style="padding: 15px;">
+        <i class="fa fa-list me-2 icon-only" style="color: #17a2b8;"></i>
+        <span class="text-label">Transações</span>
+      </a>
+      <a href="#" class="nav-link text-white" data-bs-toggle="modal" data-bs-target="#newTransactionModal" data-type="credito" style="padding: 15px;">
+        <i class="fa fa-plus me-2 icon-only" style="color: #28a745;"></i>
+        <span class="text-label">+ Receita</span>
+      </a>
+      <a href="#" class="nav-link text-white" data-bs-toggle="modal" data-bs-target="#newTransactionModal" data-type="debito" style="padding: 15px;">
+        <i class="fa fa-minus me-2 icon-only" style="color: #dc3545;"></i>
+        <span class="text-label">+ Despesa</span>
+      </a>
+      <a href="{{ url_for('budgets') }}" class="nav-link text-white" style="padding: 15px;">
+        <i class="fa fa-wallet me-2 icon-only" style="color: #ffc107;"></i>
+        <span class="text-label">Orçamentos</span>
+      </a>
+      <a href="{{ url_for('goals') }}" class="nav-link text-white" style="padding: 15px;">
+        <i class="fa fa-bullseye me-2 icon-only" style="color: #ffc107;"></i>
+        <span class="text-label">Objetivos</span>
+      </a>
+      <a href="{{ url_for('logout') }}" class="nav-link text-white" style="padding: 15px;">
+        <i class="fa fa-sign-out-alt me-2 icon-only" style="color: #ffc107;"></i>
+        <span class="text-label">Sair</span>
+      </a>
+    </div>
+    {% endif %}
+
+
+    <!-- Conteúdo Principal -->
+    <div class="flex-fill p-3">
+      <!-- Toggle de Tema -->
+      <div class="d-flex justify-content-end mb-2">
+        <button id="toggleThemeBtn" class="btn btn-sm btn-secondary">
+          <i class="fa fa-adjust"></i> Alternar Tema
+        </button>
+      </div>
+      <!-- Toast Container -->
+      <div class="toast-container"></div>
+      {% block content %}{% endblock %}
+    </div>
+  </div>
+
+  <!-- Modal: Nova Transação -->
+  <div class="modal fade" id="newTransactionModal" tabindex="-1" aria-labelledby="newTransactionModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+      <div class="modal-content">
+        <form id="newTransactionForm" method="post" action="{{ url_for('add_transaction') }}">
+          <div class="modal-header">
+            <h5 class="modal-title" id="newTransactionModalLabel">Nova Transação</h5>
+            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Fechar"></button>
+          </div>
+          <div class="modal-body">
+            <!-- Organize os campos em grupos -->
+            <div class="row mb-3">
+              <div class="col-md-6">
+                <label for="type" class="form-label">Tipo</label>
+                <select class="form-select" id="type" name="type">
+                  <option value="credito">Crédito</option>
+                  <option value="debito">Débito</option>
+                </select>
+              </div>
+              <div class="col-md-6">
+                <label for="amount" class="form-label">Valor</label>
+                <input type="number" step="0.01" class="form-control" id="amount" name="amount" required>
+              </div>
+            </div>
+            <!-- Tag -->
+            <div class="mb-3">
+              <label for="tag_select" class="form-label">Tag</label>
+              <select class="form-select" id="tag_select" name="tag_select">
+                <option value="">-- Selecione uma Tag --</option>
+                {% for t in existing_tags %}
+                <option value="{{ t }}">{{ t }}</option>
+                {% endfor %}
+                <option value="new">+ Criar Nova Tag</option>
+              </select>
+            </div>
+            <div class="mb-3" id="newTagContainer" style="display:none;">
+              <label for="new_tag" class="form-label">Nova Tag</label>
+              <input type="text" class="form-control" id="new_tag" name="new_tag" placeholder="Ex: Educação, Lazer">
+            </div>
+            <!-- Datas -->
+            <div class="row mb-3">
+              <!-- A data de lançamento não é exibida pois é definida automaticamente -->
+              <div class="col-md-6">
+                <label for="date_due" class="form-label">Data de Vencimento/Recebimento</label>
+                <input type="date" class="form-control" id="date_due" name="date_due" required>
+              </div>
+              <div class="col-md-6">
+                <label for="paid_date" class="form-label">Data do Pagamento/Recebimento</label>
+                <input type="date" class="form-control" id="paid_date" name="paid_date">
+              </div>
+            </div>
+            <!-- Opções -->
+            <div class="form-check mb-3">
+              <input class="form-check-input" type="checkbox" id="paid" name="paid">
+              <label class="form-check-label" for="paid">Pago/Recebido?</label>
+            </div>
+            <div class="form-check mb-3">
+              <input class="form-check-input" type="checkbox" id="recurring" name="recurring">
+              <label class="form-check-label" for="recurring">Transação Recorrente?</label>
+            </div>
+            <div class="mb-3" id="endRecurrenceContainer" style="display: none;">
+              <label for="end_recurrence" class="form-label">Data limite da recorrência</label>
+              <input type="date" class="form-control" id="end_recurrence" name="end_recurrence">
+            </div>
+            <!-- Descrição -->
+            <div class="mb-3">
+              <label for="description" class="form-label">Descrição</label>
+              <textarea class="form-control" id="description" name="description" rows="3"></textarea>
+            </div>
+          </div>
+          <div class="modal-footer">
+            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+            <button type="submit" class="btn btn-success">Salvar</button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal: Transações (Lista Paginada) -->
+  <div class="modal fade" id="transactionsModal" tabindex="-1" aria-labelledby="transactionsModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-xl">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h5 class="modal-title" id="transactionsModalLabel">Transações</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Fechar"></button>
+        </div>
+        <div class="modal-body" id="transactionsModalContent">
+          {% include 'transactions_partial.html' %}
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Scripts -->
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
+  <script>
+    // Sidebar: aplicar estado e salvar no LocalStorage
+    function setSidebarState(state) {
+      const sidebar = document.getElementById('sidebar');
+      const icon = document.getElementById('sidebarToggleIcon');
+      if (state === 'expanded') {
+        sidebar.classList.remove('collapsed');
+        icon.className = 'fa fa-angle-double-left';
+      } else {
+        sidebar.classList.add('collapsed');
+        icon.className = 'fa fa-bars';
+      }
+      localStorage.setItem('sidebarState', state);
+    }
+    const savedSidebarState = localStorage.getItem('sidebarState') || 'collapsed';
+    setSidebarState(savedSidebarState);
+    const toggleSidebarBtn = document.getElementById('toggleSidebarBtn');
+    if (toggleSidebarBtn) {
+      toggleSidebarBtn.addEventListener('click', () => {
+        const currentState = localStorage.getItem('sidebarState') || 'collapsed';
+        const newState = currentState === 'collapsed' ? 'expanded' : 'collapsed';
+        setSidebarState(newState);
+      });
+    }
+
+    // Tema: aplicar e salvar no LocalStorage
+    function applyTheme(theme) {
+      if (theme === 'dark') {
+        document.body.classList.add('dark-mode');
+        document.body.classList.remove('light-mode');
+      } else {
+        document.body.classList.remove('dark-mode');
+        document.body.classList.add('light-mode');
+      }
+      localStorage.setItem('theme', theme);
+    }
+    const savedTheme = localStorage.getItem('theme') || 'light';
+    applyTheme(savedTheme);
+    const toggleThemeBtn = document.getElementById('toggleThemeBtn');
+    if (toggleThemeBtn) {
+      toggleThemeBtn.addEventListener('click', () => {
+        const currentTheme = document.body.classList.contains('dark-mode') ? 'dark' : 'light';
+        const newTheme = currentTheme === 'dark' ? 'light' : 'dark';
+        applyTheme(newTheme);
+      });
+    }
+
+    // Função para exibir confetes e Toast
+    function launchConfetti() {
+      confetti({
+        particleCount: 100,
+        spread: 70,
+        origin: { y: 0.6 }
+      });
+    }
+    function showToast(titulo, subtitulo, cor) {
+      const container = document.querySelector('.toast-container');
+      const toastEl = document.createElement('div');
+      toastEl.classList.add('toast', 'align-items-center', 'border-0', `text-bg-${cor}`, 'mb-2');
+      toastEl.setAttribute('role', 'alert');
+      toastEl.setAttribute('aria-live', 'assertive');
+      toastEl.setAttribute('aria-atomic', 'true');
+      toastEl.innerHTML = `
+        <div class="d-flex">
+          <div class="toast-body">
+            <strong>${titulo}</strong><br/>
+            ${subtitulo}
+          </div>
+          <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast" aria-label="Close"></button>
+        </div>
+      `;
+      container.appendChild(toastEl);
+      const bsToast = new bootstrap.Toast(toastEl, { autohide: true, delay: 5000 });
+      bsToast.show();
+    }
+
+    // Modal Nova Transação: preseleciona o tipo com base no data-type
+    const newTransactionModal = document.getElementById('newTransactionModal');
+    newTransactionModal.addEventListener('show.bs.modal', function (event) {
+      const triggerLink = event.relatedTarget;
+      const preselectedType = triggerLink.getAttribute('data-type');
+      const typeSelect = newTransactionModal.querySelector('#type');
+      if (preselectedType && typeSelect) {
+        typeSelect.value = preselectedType;
+      }
+    });
+
+    // Toggle para campo de recorrência
+    const recurringCheckbox = document.getElementById('recurring');
+    const endRecurrenceContainer = document.getElementById('endRecurrenceContainer');
+    if (recurringCheckbox && endRecurrenceContainer) {
+      recurringCheckbox.addEventListener('change', function() {
+        endRecurrenceContainer.style.display = this.checked ? 'block' : 'none';
+      });
+    }
+    // Define o max do input de end_recurrence dinamicamente
+    document.addEventListener("DOMContentLoaded", function() {
+      const endRecurrenceInput = document.getElementById('end_recurrence');
+      if (endRecurrenceInput) {
+        const currentYear = new Date().getFullYear();
+        endRecurrenceInput.max = currentYear + "-12-31";
+      }
+    });
+
+    // Relógio em tempo real
+    function updateClock() {
+      const now = new Date();
+      const options = {
+        weekday: 'long',
+        year: 'numeric',
+        month: 'long',
+        day: 'numeric',
+        hour: 'numeric',
+        minute: 'numeric',
+        second: 'numeric'
+      };
+      const formatted = now.toLocaleString('pt-BR', options);
+      document.getElementById('clock').textContent = formatted;
+    }
+    updateClock();
+    setInterval(updateClock, 1000);
+
+    // Paginação via AJAX para o modal de Transações
+    // Usando fetch (sem jQuery)
+    document.addEventListener('click', function(e) {
+      const pageLink = e.target.closest('.pagination a.page-link');
+      if (pageLink) {
+        e.preventDefault();
+        const url = pageLink.getAttribute('href');
+        fetch(url)
+          .then(response => response.text())
+          .then(html => {
+            document.getElementById('transactionsModalContent').innerHTML = html;
+          })
+          .catch(error => console.error('Erro ao carregar transações:', error));
+      }
+    });
+  </script>
+  {% block scripts %}{% endblock %}
+</body>
+</html>
